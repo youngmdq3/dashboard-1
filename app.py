@@ -11,7 +11,7 @@ st.markdown("""
     .sidebar .sidebar-content { background: #1a1a1a; }
     h1, h2, h3 { color: #ffffff !important; font-family: 'Courier New', monospace; }
     </style>
-""", unsafe_allow_value=True)
+""", unsafe_allow_html=True)
 
 # 2. 사이드바 구성
 st.sidebar.title("CONTROL PANEL")
