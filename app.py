@@ -3,7 +3,7 @@ import streamlit as st
 # 1. 페이지 기본 설정 및 모바일 반응형 뷰포트 최적화
 st.set_page_config(page_title="OWNER SYSTEM", layout="wide")
 
-# 불필요한 이모지를 배제한 하이엔드 무채색 터미널 스타일 CSS
+# 하이엔드 무채색 터미널 스타일 CSS
 st.markdown("""
     <style>
     /* 전체 배경 및 텍스트 톤 다운 */
@@ -14,7 +14,7 @@ st.markdown("""
     h1, h2, h3, h4 { color: #ffffff !important; font-family: 'Courier New', monospace; font-weight: 700; letter-spacing: -0.5px; }
     .small-caption { font-size: 12px; color: #737373; font-family: monospace; }
     
-    /* 메트릭 박스 커스텀 (조잡한 기본 디자인 변경) */
+    /* 메트릭 박스 커스텀 */
     div[data-testid="stMetricKey"] { color: #a3a3a3 !important; font-size: 13px !important; font-weight: 500; }
     div[data-testid="stMetricValue"] { color: #ffffff !important; font-size: 24px !important; font-weight: 700; font-family: 'Courier New', monospace; }
     
@@ -45,7 +45,6 @@ st.markdown("---")
 
 
 # 4. 자산 운영 상태 연산 로직
-# 시장 국면 및 운영 모드별 권장 레버리지 설정
 if market_phase == "고변동성 하락장 (리스크 관리)":
     rec_lev = 1.0 if op_mode == "보수형 (Conservative)" else 2.0
 elif market_phase == "강한 추세 상승장":
@@ -53,11 +52,9 @@ elif market_phase == "강한 추세 상승장":
 else:
     rec_lev = 1.5 if op_mode == "보수형 (Conservative)" else 3.0
 
-# 배분 비율 및 차이 계산
 current_lev_ratio = current_leverage_amt / total_assets if total_assets > 0 else 0.0
 lev_difference = rec_lev - current_lev_ratio
 
-# 추가 지표 계산 (자본 가동률 및 여유 여력)
 max_allowed_position = total_assets * rec_lev
 remaining_margin = max_allowed_position - current_leverage_amt
 capital_utilization = (current_leverage_amt / max_allowed_position) * 100 if max_allowed_position > 0 else 0.0
@@ -73,4 +70,42 @@ with col1:
 
 with col2:
     st.metric(label="현재 레버리지 비율 (CURRENT LEV)", value=f"{current_lev_ratio:.2f}x")
-    st.metric(label="권장 레버리지 비율 (
+    st.metric(label="권장 레버리지 비율 (REC LEV)", value=f"{rec_lev:.1f}x")
+
+with col3:
+    if lev_difference >= 0:
+        status_text = f"+{lev_difference:.2f}x 여유"
+    else:
+        status_text = f"{lev_difference:.2f}x 초과 (위험)"
+        
+    st.metric(label="레버리지 격차 (VARIANCE)", value=status_text)
+    st.metric(label="현재 자본 가동률 (UTILIZATION)", value=f"{capital_utilization:.1f}%")
+
+st.markdown("---")
+
+
+# 6. 리스크 관리 가이드라인 및 여유 여력 통제
+st.markdown("### CAPITAL EVALUATION")
+
+if lev_difference < 0:
+    st.markdown(
+        f"""
+        <div style="padding:15px; background-color:#1a0505; border:1px solid #551a1a; color:#f87171; font-family:monospace; font-size:14px;">
+        <strong>[CRITICAL WARNING] OVER-LEVERAGED STATUS</strong><br>
+        현재 계정의 권장 리스크 한도를 초과했습니다. 포지션 규모를 축소하거나 자산을 확충하여 격차를 줄이십시오.<br>
+        • 초과 포지션 규모: ${abs(remaining_margin):,.0f}
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+else:
+    st.markdown(
+        f"""
+        <div style="padding:15px; background-color:#051a05; border:1px solid #1a551a; color:#4ade80; font-family:monospace; font-size:14px;">
+        <strong>[STABLE] OPERATIONAL MARGIN AVAILABLE</strong><br>
+        현재 자산 운영 가이드라인 내에서 안정적으로 제어되고 있습니다.<br>
+        • 추가 진입 가능 여력 (CAPITAL MARGIN): ${remaining_margin:,.0f}
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
