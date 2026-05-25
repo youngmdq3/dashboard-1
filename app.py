@@ -1,13 +1,11 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
 from datetime import datetime
 
-# 1. 페이지 기본 설정 (와이드 모드 및 타이틀)
+# 1. 페이지 기본 설정
 st.set_page_config(page_title="OWNER TRADING SYSTEM", layout="wide")
 
-# 무채색 오너 감성을 위한 딥 다크 커스텀 스타일
+# 무채색 오너 감성의 딥 다크 커스텀 스타일
 st.markdown("""
     <style>
     .reportview-container, .main { background-color: #0b0b0b; color: #e0e0e0; }
@@ -18,7 +16,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 2. 사이드바 구성 (오너 전용 제어 센터)
+# 2. 사이드바 구성 (오너 관제 센터)
 st.sidebar.title("🦅 OWNER CONTROL CENTER")
 st.sidebar.markdown("---")
 
@@ -59,50 +57,58 @@ with col3:
 
 st.markdown("---")
 
-# 5. [신규 추가] 자산 체급 상승 시뮬레이터 (복리 시각화)
-st.subheader("📈 ASSET GROWTH SIMULATOR (자산 성장 시뮬레이션)")
-st.markdown("설정한 목표 수익률과 기간에 따른 체급 변화 추이를 시각화합니다.")
+# 5. [신규 탑재] 실전 포지션 빌더 & 리스크 계산기
+st.subheader("⚡ LAYER 2: POSITION BUILDER (실시간 리스크 계산기)")
+st.markdown("포지션 진입 전, 손익비와 리스크 한도를 초과하지 않는지 계산합니다.")
 
-sim_col1, sim_col2, sim_col3 = st.columns(3)
-with sim_col1:
-    target_pct = st.number_input("회전당 목표 수익률 (%)", value=5.0, step=0.5) / 100
-with sim_col2:
-    total_trades = st.slider("총 매매 횟수 (사이클)", min_value=10, max_value=100, value=30)
-with sim_col3:
-    agg_multiplier = st.number_input("공격형 모드 가중치 (배수)", value=1.5, step=0.1)
+calc_col1, calc_col2 = st.columns(2)
 
-# 복리 계산 로직
-trades = np.arange(0, total_trades + 1)
-con_growth = current_seed * ((1 + target_pct) ** trades)
-agg_growth = current_seed * ((1 + (target_pct * agg_multiplier)) ** trades)
+with calc_col1:
+    st.markdown("##### 📥 Entry Parameters")
+    position_side = st.selectbox("포지션 방향", ["LONG", "SHORT"])
+    entry_price = st.number_input("진입 가격 (Entry)", value=100.0, step=0.1)
+    sl_price = st.number_input("손절 가격 (Stop Loss)", value=95.0, step=0.1)
+    tp_price = st.number_input("익절 가격 (Take Profit)", value=115.0, step=0.1)
 
-# Plotly 차트 생성 (무채색 스케일 감성 코딩)
-fig = go.Figure()
-fig.add_trace(go.Scatter(x=trades, y=con_growth, name='보수형 (Base)', line=dict(color='#888888', width=2)))
-fig.add_trace(go.Scatter(x=trades, y=agg_growth, name='공격형 (Aggressive)', line=dict(color='#ffffff', width=2.5, dash='dot')))
+with calc_col2:
+    st.markdown("##### 📊 Risk & Reward Metrics")
+    
+    # 손익비 및 리스크 계산 로직
+    if position_side == "LONG":
+        risk_pct = ((entry_price - sl_price) / entry_price) * 100 if entry_price > 0 else 0
+        reward_pct = ((tp_price - entry_price) / entry_price) * 100 if entry_price > 0 else 0
+    else:
+        risk_pct = ((sl_price - entry_price) / entry_price) * 100 if entry_price > 0 else 0
+        reward_pct = ((entry_price - tp_price) / entry_price) * 100 if entry_price > 0 else 0
+        
+    rr_ratio = (reward_pct / risk_pct) if risk_pct > 0 else 0
+    
+    # 오너가 감당하는 실제 달러 리스크 (최대 포지션 규모 기준 세팅)
+    expected_loss = max_position * (risk_pct / 100)
+    expected_gain = max_position * (reward_pct / 100)
+    
+    # 지표 출력
+    st.metric(label="🎯 리스크 대비 보상 비율 (손익비)", value=f"1 : {rr_ratio:.2f}")
+    st.metric(label="🚨 손절 시 예상 손실 금액", value=f"${expected_loss:,.2f}", delta=f"-{risk_pct:.2f}%", delta_color="inverse")
+    st.metric(label="💰 익절 시 예상 수익 금액", value=f"${expected_gain:,.2f}", delta=f"+{reward_pct:.2f}%")
 
-fig.update_layout(
-    title=f"복리 사이클에 따른 자산 추이 (최종 목표 체급: ${agg_growth[-1]:,.0f})",
-    xaxis_title="매매 횟수 (Trades)",
-    yaxis_title="자산 규모 ($)",
-    template="plotly_dark",
-    plot_bgcolor="#121212",
-    paper_bgcolor="#0b0b0b",
-    margin=dict(l=20, r=20, t=50, b=20)
-)
-st.plotly_chart(fig, use_container_width=True)
+    # 메타인지 통제 장치
+    if rr_ratio < 2.0:
+        st.warning("⚠️ 손익비가 1:2 미만입니다. 손익비가 좋지 않은 자리는 오너의 진입 대상이 아닙니다.")
+    else:
+        st.success("✅ 합리적인 손익비 구간입니다. 규율 준수 하에 진입이 가능합니다.")
 
 st.markdown("---")
 
 # 6. [거래 레이어] 규율 제어 장치
 st.subheader("⚡ LAYER 4: TRADING & DISCIPLINE (메타인지 제어)")
-st.markdown("⚠️ **포지션 진입 전, 아래 원칙을 반드시 체크하십시오. 하나라도 누락 시 진입이 차단됩니다.**")
+st.markdown("⚠️ **포지션 진입 전, 아래 원칙을 반드시 체크하십시오.**")
 
 rule1 = st.checkbox("1. 상위 타임프레임(추세)과 하위 타임프레임(진입)의 방향성 정렬을 확인했는가?")
 rule2 = st.checkbox(f"2. 현재 사용하려는 레버리지가 권장 가이드({recommended_lev}x) 이하인가?")
-rule3 = st.checkbox("3. 손절가(SL)를 시스템에 먼저 입력했는가? (뇌동 손절 절대 금지)")
+rule3 = st.checkbox("3. 계산된 손절 시 예상 손실 금액을 심리적으로 완전히 받아들였는가?")
 
-if rule1 and rule2 and rule3:
-    st.success("✅ 모든 매매 규율 통과. 포지션 진입 관제가 허용됩니다.")
+if rule1 and rule2 and rule3 and rr_ratio >= 2.0:
+    st.success("✅ 모든 매매 규율 및 손익비 조건 통과. 포지션 진입 관제가 허용됩니다.")
 else:
-    st.error("🔒 규율 미준수: 진입 제어 장치가 활성화되어 매매 통제가 차단되었습니다.")
+    st.error("🔒 진입 제어 장치 활성화: 규율 미준수 또는 손익비 미달로 인해 진입이 차단되었습니다.")
