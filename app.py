@@ -1,3 +1,4 @@
+import streamlit as st
 bash
 
 cat > /mnt/user-data/outputs/qcs_app.py << 'ENDOFFILE'
