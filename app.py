@@ -86,7 +86,6 @@ fig.update_layout(
     xaxis_title="매매 횟수 (Trades)",
     yaxis_title="자산 규모 ($)",
     template="plotly_dark",
-    background_color="#121212",
     plot_bgcolor="#121212",
     paper_bgcolor="#0b0b0b",
     margin=dict(l=20, r=20, t=50, b=20)
