@@ -1126,4 +1126,3 @@ with tab4:
             st.session_state.trade_log = []
             st.rerun()
 ENDOFFILE
-echo "Done — $(wc -l < /mnt/user-data/outputs/qcs_app.py) lines"
